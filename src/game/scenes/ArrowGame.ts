@@ -16,12 +16,17 @@ export class ArrowGame extends Scene {
     timeBetweenClicks: number = 0;
     timeOfLastClick: number = 0;
     timePerClickAvg: Array<number> = [];
+    correctSound: Phaser.Sound.BaseSound;
+    incorrectSound: Phaser.Sound.BaseSound;
 
     constructor() {
         super("Game");
     }
 
     initialize() {
+        this.correctSound = this.sound.add("correct");
+        this.incorrectSound = this.sound.add("incorrect");
+
         if (window.localStorage.getItem("score")) {
             this.score = JSON.parse(window.localStorage.getItem("score") || "");
         }
@@ -132,6 +137,7 @@ export class ArrowGame extends Scene {
         this.score.avg = a.toFixed(2) || "0.0";
 
         const updateScore = () => {
+            this.correctSound.play();
             if (arrow.style.color === this.red) {
                 this.score.red += 1;
             } else {
@@ -157,6 +163,7 @@ export class ArrowGame extends Scene {
         } else if (action.code === "ArrowDown" && arrow.angle === 90) {
             updateScore();
         } else {
+            this.incorrectSound.play();
             if (this.timeBetweenClicks < 500) {
                 this.score.score -= 2;
             } else {

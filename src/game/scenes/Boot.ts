@@ -5,7 +5,10 @@ export class Boot extends Scene {
         super("Boot");
     }
 
-    preload() {}
+    preload() {
+        this.load.audio("correct", ["assets/sounds/correct.mp3"]);
+        this.load.audio("incorrect", ["assets/sounds/incorrect.mp3"]);
+    }
 
     create() {
         this.scene.start("Game");
