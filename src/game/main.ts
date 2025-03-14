@@ -11,6 +11,7 @@ const config: Phaser.Types.Core.GameConfig = {
     parent: "game-container",
     backgroundColor: "#000000",
     scene: [Boot, ArrowGame],
+    resolution: window.devicePixelRatio,
 };
 
 const StartGame = (parent: string) => {
