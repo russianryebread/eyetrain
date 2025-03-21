@@ -1,13 +1,10 @@
 import { EventBus } from "../EventBus";
 import { Scene } from "phaser";
 import { ScoreObject } from "../../types/Score";
+import { BLUE, RED, ARROW_TEXT, ARROW_SIZE } from "../constants";
 
-const RED = "#FF0000"; // Darker "#440000";
-const BLUE = "#0000FF";
 const SCOREBOARD_PADDING_X = 550;
 const SCOREBOARD_PADDING_Y = 200;
-const ARROW_SIZE = 200;
-const ARROW_TEXT = "➜";
 const FAST_CLICK_RESPONSE_TIME_MS = 800;
 
 export class ArrowGame extends Scene {
@@ -16,8 +13,6 @@ export class ArrowGame extends Scene {
     scoreBoard: Phaser.GameObjects.Text;
     resetScore: Phaser.GameObjects.Text;
     arrow: Phaser.GameObjects.Text;
-    red: string = RED;
-    blue: string = BLUE;
     timeBetweenClicks: number = 0;
     timeOfLastClick: number = 0;
     timePerClickAvg: Array<number> = [];
@@ -25,7 +20,7 @@ export class ArrowGame extends Scene {
     incorrectSound: Phaser.Sound.BaseSound;
 
     constructor() {
-        super("Game");
+        super("ArrowGame");
     }
 
     preload() {
@@ -123,7 +118,7 @@ export class ArrowGame extends Scene {
         const changeArrow = () => {
             this.updateTime();
             const { x, y } = this.genXY();
-            const color = Phaser.Math.Between(0, 1) ? this.red : this.blue;
+            const color = Phaser.Math.Between(0, 1) ? RED : BLUE;
 
             this.arrow
                 .setX(x)
@@ -166,7 +161,7 @@ export class ArrowGame extends Scene {
 
         const updateScore = () => {
             this.correctSound.play();
-            if (arrow.style.color === this.red) {
+            if (arrow.style.color === RED) {
                 this.score.red += 1;
             } else {
                 this.score.blue += 1;

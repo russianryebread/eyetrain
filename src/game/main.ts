@@ -1,4 +1,5 @@
 import { ArrowGame } from "./scenes/ArrowGame";
+import { FloatingArrowGame } from "./scenes/FloatingArrowGame";
 import { AUTO, Game } from "phaser";
 
 //  Find out more information about the Game Config at:
@@ -13,9 +14,16 @@ const config: Phaser.Types.Core.GameConfig = {
         height: window.innerHeight * window.devicePixelRatio,
         zoom: 1 / window.devicePixelRatio,
     },
+    physics: {
+        default: "arcade",
+        arcade: {
+            gravity: { y: 0 },
+            debug: false,
+        },
+    },
     parent: "game-container",
     backgroundColor: "#000000",
-    scene: [ArrowGame],
+    scene: [ArrowGame, FloatingArrowGame],
 };
 
 const StartGame = (parent: string) => {
