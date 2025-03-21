@@ -5,7 +5,7 @@
         <nav>
             <ul>
                 <li><RouterLink to="/arrows">Arrows Game</RouterLink></li>
-                <!-- <li><RouterLink to="/float">Float Game</RouterLink></li> -->
+                <li><RouterLink to="/float">Float Game</RouterLink></li>
             </ul>
         </nav>
     </div>

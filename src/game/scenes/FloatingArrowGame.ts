@@ -13,7 +13,7 @@ export class FloatingArrowGame extends Scene {
     angle = 0;
 
     constructor() {
-        super("FloatingArrowGame");
+        super({ key: "FloatingArrowGame" });
     }
 
     preload() {
@@ -28,21 +28,26 @@ export class FloatingArrowGame extends Scene {
         this.correctSound = this.sound.add("correct");
         this.incorrectSound = this.sound.add("incorrect");
 
+        const arrow_padding = ARROW_SIZE / 2;
         this.arrowText = this.add.text(
-            Phaser.Math.Between(100, this.scale.width - 100),
-            Phaser.Math.Between(100, this.scale.height - 100),
+            Phaser.Math.Between(
+                arrow_padding,
+                this.scale.width - arrow_padding,
+            ),
+            Phaser.Math.Between(
+                arrow_padding,
+                this.scale.height - arrow_padding,
+            ),
             ARROW_TEXT,
             {
-                fontSize: ARROW_SIZE,
+                fontSize: ARROW_SIZE * 2,
                 color: BLUE,
             },
         );
 
         this.physics.world.enable(this.arrowText);
-        if (this.arrowText && this.arrowText.body) {
-            this.arrowText.body.setCollideWorldBounds(true);
-            this.arrowText.body.setBounce(1);
-        }
+        this.arrowText.body.setCollideWorldBounds(true);
+        this.arrowText.body.setBounce(1);
 
         this.arrowText.setOrigin(0.5);
         this.setRandomDirection(this.arrowText);

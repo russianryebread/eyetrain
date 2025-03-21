@@ -20,7 +20,7 @@ export class ArrowGame extends Scene {
     incorrectSound: Phaser.Sound.BaseSound;
 
     constructor() {
-        super("ArrowGame");
+        super({ key: "ArrowGame" });
     }
 
     preload() {

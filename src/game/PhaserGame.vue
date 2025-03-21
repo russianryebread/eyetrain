@@ -1,22 +1,41 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue";
 import { EventBus } from "./EventBus";
-import StartGame from "./main";
-import Phaser from "phaser";
+import { ArrowGame } from "./scenes/ArrowGame";
+import { FloatingArrowGame } from "./scenes/FloatingArrowGame";
+import Phaser, { AUTO, Game } from "phaser";
 
-// Save the current scene instance
-const scene = ref();
 const game = ref();
+const props = defineProps(["scene"]);
 
 const emit = defineEmits(["current-active-scene"]);
+const config: Phaser.Types.Core.GameConfig = {
+    type: AUTO,
+    width: window.innerWidth,
+    height: window.innerHeight,
+    scale: {
+        mode: Phaser.Scale.NONE,
+        width: window.innerWidth * window.devicePixelRatio,
+        height: window.innerHeight * window.devicePixelRatio,
+        zoom: 1 / window.devicePixelRatio,
+    },
+    physics: {
+        default: "arcade",
+        arcade: {
+            gravity: { y: 0 },
+            debug: false,
+        },
+    },
+    parent: "game-container",
+    backgroundColor: "#000000",
+    scene: [ArrowGame, FloatingArrowGame],
+};
 
 onMounted(() => {
-    game.value = StartGame("game-container");
-
+    game.value = new Game({ ...config });
+    game.value.scene.start(props.scene);
     EventBus.on("current-scene-ready", (scene_instance: Phaser.Scene) => {
         emit("current-active-scene", scene_instance);
-
-        scene.value = scene_instance;
     });
 });
 
@@ -27,7 +46,7 @@ onUnmounted(() => {
     }
 });
 
-defineExpose({ scene, game });
+defineExpose({ game });
 </script>
 
 <template>
