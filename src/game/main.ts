@@ -1,4 +1,3 @@
-import { Boot } from "./scenes/Boot";
 import { ArrowGame } from "./scenes/ArrowGame";
 import { AUTO, Game } from "phaser";
 
@@ -8,9 +7,15 @@ const config: Phaser.Types.Core.GameConfig = {
     type: AUTO,
     width: window.innerWidth,
     height: window.innerHeight,
+    scale: {
+        mode: Phaser.Scale.NONE,
+        width: window.innerWidth * window.devicePixelRatio,
+        height: window.innerHeight * window.devicePixelRatio,
+        zoom: 1 / window.devicePixelRatio,
+    },
     parent: "game-container",
     backgroundColor: "#000000",
-    scene: [Boot, ArrowGame],
+    scene: [ArrowGame],
 };
 
 const StartGame = (parent: string) => {

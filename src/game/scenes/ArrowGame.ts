@@ -2,16 +2,21 @@ import { EventBus } from "../EventBus";
 import { Scene } from "phaser";
 import { ScoreObject } from "../../types/Score";
 
-const RED = "#FF0000";
+const RED = "#FF0000"; // Darker "#440000";
 const BLUE = "#0000FF";
+const SCOREBOARD_PADDING_X = 550;
+const SCOREBOARD_PADDING_Y = 200;
+const ARROW_SIZE = 200;
+const ARROW_TEXT = "➜";
+const FAST_CLICK_RESPONSE_TIME_MS = 800;
 
 export class ArrowGame extends Scene {
     camera: Phaser.Cameras.Scene2D.Camera;
-    score: ScoreObject = { score: 0, total: 0, red: 0, blue: 0 };
+    score: ScoreObject = { score: 0, total: 0, red: 0, blue: 0, avg: "0.0" };
     scoreBoard: Phaser.GameObjects.Text;
     resetScore: Phaser.GameObjects.Text;
     arrow: Phaser.GameObjects.Text;
-    red: string = RED; //"#440000";
+    red: string = RED;
     blue: string = BLUE;
     timeBetweenClicks: number = 0;
     timeOfLastClick: number = 0;
@@ -23,31 +28,9 @@ export class ArrowGame extends Scene {
         super("Game");
     }
 
-    initialize() {
-        this.correctSound = this.sound.add("correct");
-        this.incorrectSound = this.sound.add("incorrect");
-
-        if (window.localStorage.getItem("score")) {
-            this.score = JSON.parse(window.localStorage.getItem("score") || "");
-        }
-
-        this.setScore(this.score);
-
-        const x = Phaser.Math.Between(64, this.scale.width - 64);
-        const y = Phaser.Math.Between(64, this.scale.height - 64);
-
-        if (!this.arrow) {
-            this.arrow = this.add
-                .text(x, y, "➜", {
-                    fontFamily: "Arial Black",
-                    fontSize: 100,
-                    color: BLUE,
-                    align: "center",
-                })
-                .setOrigin(0.5)
-                .setDepth(100)
-                .setAngle(Phaser.Math.RND.pick([-90, 0, 90, 180]));
-        }
+    preload() {
+        this.load.audio("correct", ["assets/sounds/correct.mp3"]);
+        this.load.audio("incorrect", ["assets/sounds/incorrect.mp3"]);
     }
 
     updateTime() {
@@ -72,12 +55,31 @@ export class ArrowGame extends Scene {
         );
     }
 
-    create() {
-        this.camera = this.cameras.main;
-        this.camera.setBackgroundColor(0x000000);
+    genXY() {
+        // Make sure we don't generate an arrow that overlaps the scoreboard
+        // or is too close to the edge of the screen
+        let x, y;
+        const arrow_padding = ARROW_SIZE / 2;
+        do {
+            x = Phaser.Math.Between(
+                arrow_padding,
+                this.scale.width - arrow_padding,
+            );
+            y = Phaser.Math.Between(
+                arrow_padding,
+                this.scale.height - arrow_padding,
+            );
+        } while (
+            x < SCOREBOARD_PADDING_X + arrow_padding &&
+            y < SCOREBOARD_PADDING_Y + arrow_padding
+        );
 
-        // Reset score button
-        this.resetScore = this.add.text(150, 10, "Reset Score", {
+        return { x, y };
+    }
+
+    initScore() {
+        this.resetScore = this.add.text(300, 30, "Reset Score", {
+            fontSize: "30px",
             color: "#0f0",
         });
         this.resetScore.setInteractive();
@@ -88,13 +90,39 @@ export class ArrowGame extends Scene {
             this.setScore(this.score);
         });
 
-        this.initialize();
+        if (window.localStorage.getItem("score")) {
+            this.score = JSON.parse(window.localStorage.getItem("score") || "");
+        }
+
+        this.setScore(this.score);
+    }
+
+    create() {
+        this.camera = this.cameras.main;
+        this.camera.setBackgroundColor(0x000000);
+        this.cameras.main.setRoundPixels(true);
+        this.correctSound = this.sound.add("correct");
+        this.incorrectSound = this.sound.add("incorrect");
+
+        this.initScore();
+
+        if (!this.arrow) {
+            const { x, y } = this.genXY();
+            this.arrow = this.add
+                .text(x, y, ARROW_TEXT, {
+                    fontFamily: "Arial Black",
+                    fontSize: ARROW_SIZE,
+                    color: BLUE,
+                    align: "center",
+                })
+                .setOrigin(0.5)
+                .setDepth(100)
+                .setAngle(Phaser.Math.RND.pick([-90, 0, 90, 180]));
+        }
 
         const changeArrow = () => {
             this.updateTime();
-
-            const x = Phaser.Math.Between(64, this.scale.width - 64);
-            const y = Phaser.Math.Between(64, this.scale.height - 64);
+            const { x, y } = this.genXY();
             const color = Phaser.Math.Between(0, 1) ? this.red : this.blue;
 
             this.arrow
@@ -144,8 +172,8 @@ export class ArrowGame extends Scene {
                 this.score.blue += 1;
             }
 
-            // 2 points for clicking within 500ms
-            if (this.timeBetweenClicks < 500) {
+            // 2 points for clicking within 700ms
+            if (this.timeBetweenClicks < FAST_CLICK_RESPONSE_TIME_MS) {
                 this.score.score += 1;
             }
             if (this.timeBetweenClicks < 1000) {
@@ -153,18 +181,18 @@ export class ArrowGame extends Scene {
             }
         };
 
-        // arrow adgle is 0 if the arrow is pointing to the right
-        if (action.code === "ArrowLeft" && arrow.angle === -180) {
-            updateScore();
-        } else if (action.code === "ArrowRight" && arrow.angle === 0) {
-            updateScore();
-        } else if (action.code === "ArrowUp" && arrow.angle === -90) {
-            updateScore();
-        } else if (action.code === "ArrowDown" && arrow.angle === 90) {
+        // arrow angle is 0 if the arrow is pointing to the right
+        if (
+            (action.code === "ArrowLeft" && arrow.angle === -180) ||
+            (action.code === "ArrowRight" && arrow.angle === 0) ||
+            (action.code === "ArrowUp" && arrow.angle === -90) ||
+            (action.code === "ArrowDown" && arrow.angle === 90)
+        ) {
             updateScore();
         } else {
             this.incorrectSound.play();
-            if (this.timeBetweenClicks < 500) {
+            // Try to discourage spam clicking
+            if (this.timeBetweenClicks < 300) {
                 this.score.score -= 2;
             } else {
                 this.score.score -= 1;
@@ -186,7 +214,7 @@ export class ArrowGame extends Scene {
         if (!this.scoreBoard) {
             this.scoreBoard = this.add.text(10, 10, text, {
                 fontFamily: "Arial",
-                fontSize: 15,
+                fontSize: 30,
                 color: "#FFFFFF",
                 stroke: "#000000",
                 strokeThickness: 2,
