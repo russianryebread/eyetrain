@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue";
 import { EventBus } from "./EventBus";
-import { ArrowGame } from "./scenes/ArrowGame";
-import { FloatingArrowGame } from "./scenes/FloatingArrowGame";
 import Phaser, { AUTO, Game } from "phaser";
 
 const game = ref();
@@ -28,12 +26,15 @@ const config: Phaser.Types.Core.GameConfig = {
     },
     parent: "game-container",
     backgroundColor: "#000000",
-    scene: [ArrowGame, FloatingArrowGame],
 };
 
 onMounted(() => {
+    // Set scene to be loaded from router
+    config.scene = props.scene;
+
     game.value = new Game({ ...config });
     game.value.scene.start(props.scene);
+
     EventBus.on("current-scene-ready", (scene_instance: Phaser.Scene) => {
         emit("current-active-scene", scene_instance);
     });

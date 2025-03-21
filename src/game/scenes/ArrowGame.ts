@@ -105,13 +105,11 @@ export class ArrowGame extends Scene {
             const { x, y } = this.genXY();
             this.arrow = this.add
                 .text(x, y, ARROW_TEXT, {
-                    fontFamily: "Arial Black",
                     fontSize: ARROW_SIZE,
                     color: BLUE,
                     align: "center",
                 })
                 .setOrigin(0.5)
-                .setDepth(100)
                 .setAngle(Phaser.Math.RND.pick([-90, 0, 90, 180]));
         }
 

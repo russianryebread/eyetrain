@@ -40,7 +40,7 @@ export class FloatingArrowGame extends Scene {
             ),
             ARROW_TEXT,
             {
-                fontSize: ARROW_SIZE * 2,
+                fontSize: ARROW_SIZE,
                 color: BLUE,
             },
         );
