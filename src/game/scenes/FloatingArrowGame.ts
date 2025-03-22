@@ -2,7 +2,7 @@ import { EventBus } from "../EventBus";
 import { Scene } from "phaser";
 import { RED, BLUE, ARROW_TEXT, ARROW_SIZE } from "../constants";
 
-const SPEED = 150;
+const SPEED = 200;
 
 export class FloatingArrowGame extends Scene {
     camera: Phaser.Cameras.Scene2D.Camera;
@@ -46,21 +46,16 @@ export class FloatingArrowGame extends Scene {
         );
 
         this.physics.world.enable(this.arrowText);
-        this.arrowText.body.setCollideWorldBounds(true);
-        this.arrowText.body.setBounce(1);
+        const arrowBody = this.arrowText.body as Phaser.Physics.Arcade.Body;
+        if (arrowBody) {
+            arrowBody.setCollideWorldBounds(true);
+            arrowBody.setBounce(1);
+        }
 
         this.arrowText.setOrigin(0.5);
         this.setRandomDirection(this.arrowText);
 
-        // Change direction of movement (between 4-8 seconds)
-        this.time.addEvent({
-            delay: Phaser.Math.Between(4000, 8000),
-            callback: () => this.setRandomDirection(this.arrowText),
-            callbackScope: this,
-            loop: true,
-        });
-
-        // hange direction of arrow (between 2-5 seconds)
+        // Change direction of arrow (between 2-5 seconds)
         this.time.addEvent({
             delay: Phaser.Math.Between(2000, 5000),
             callback: () => this.setRandomAngle(this.arrowText),

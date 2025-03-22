@@ -196,6 +196,7 @@ export class ArrowGame extends Scene {
     }
 
     setScore(score: ScoreObject) {
+        EventBus.emit("update-score", score);
         const text = [
             `Score: ${score.score}`,
             `Total: ${score.total}`,

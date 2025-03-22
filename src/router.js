@@ -1,17 +1,17 @@
 import { createWebHistory, createRouter } from "vue-router";
 
 import MainMenu from "./MainMenu.vue";
-import PhaserGame from "./game/PhaserGame.vue";
+import EyeTrain from "./game/EyeTrain.vue";
 
 import { ArrowGame } from "./game/scenes/ArrowGame";
 import { FloatingArrowGame } from "./game/scenes/FloatingArrowGame";
 
 const routes = [
     { path: "/", component: MainMenu },
-    { path: "/arrows", component: PhaserGame, props: { scene: ArrowGame } },
+    { path: "/arrows", component: EyeTrain, props: { scene: ArrowGame } },
     {
         path: "/float",
-        component: PhaserGame,
+        component: EyeTrain,
         props: { scene: FloatingArrowGame },
     },
 ];
