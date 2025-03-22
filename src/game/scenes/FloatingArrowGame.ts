@@ -84,7 +84,8 @@ export class FloatingArrowGame extends Scene {
 
             // Set the velocity
             if (textObj.body) {
-                textObj.body.setVelocity(vx, vy);
+                let body = textObj.body as Phaser.Physics.Arcade.Body;
+                body.setVelocity(vx, vy);
             }
         } catch (error) {
             console.error("Error setting direction:", error);
