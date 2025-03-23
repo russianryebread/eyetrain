@@ -1,32 +1,26 @@
 import { EventBus } from "../EventBus";
 import { Scene } from "phaser";
+import { ScoreObject } from "../../types/Score";
 import { RED, BLUE, ARROW_TEXT, ARROW_SIZE } from "../constants";
 
 const SPEED = 200;
 
 export class FloatingArrowGame extends Scene {
+    score: ScoreObject = { score: 0, total: 0, red: 0, blue: 0, avg: "0.0" };
     camera: Phaser.Cameras.Scene2D.Camera;
-    correctSound: Phaser.Sound.BaseSound;
-    incorrectSound: Phaser.Sound.BaseSound;
     arrowText: Phaser.GameObjects.Text;
     changeDirectionTimer: Phaser.Time.TimerEvent;
+    loggedScoreForTurn: boolean = false;
     angle = 0;
 
     constructor() {
         super({ key: "FloatingArrowGame" });
     }
 
-    preload() {
-        this.load.audio("correct", ["assets/sounds/correct.mp3"]);
-        this.load.audio("incorrect", ["assets/sounds/incorrect.mp3"]);
-    }
-
     create() {
         this.camera = this.cameras.main;
         this.camera.setBackgroundColor(0x000000);
         this.cameras.main.setRoundPixels(true);
-        this.correctSound = this.sound.add("correct");
-        this.incorrectSound = this.sound.add("incorrect");
 
         const arrow_padding = ARROW_SIZE / 2;
         this.arrowText = this.add.text(
@@ -55,21 +49,77 @@ export class FloatingArrowGame extends Scene {
         this.arrowText.setOrigin(0.5);
         this.setRandomDirection(this.arrowText);
 
-        // Change direction of arrow (between 2-5 seconds)
+        // Change direction of arrow (between 1-5 seconds)
         this.time.addEvent({
-            delay: Phaser.Math.Between(2000, 5000),
+            delay: Phaser.Math.Between(1000, 5000),
             callback: () => this.setRandomAngle(this.arrowText),
             callbackScope: this,
             loop: true,
         });
 
+        this.input.keyboard?.on("keyup-UP", (event: any) => {
+            this.logAction(event, this.arrowText);
+        });
+
+        this.input.keyboard?.on("keyup-DOWN", (event: any) => {
+            this.logAction(event, this.arrowText);
+        });
+
+        this.input.keyboard?.on("keyup-RIGHT", (event: any) => {
+            this.logAction(event, this.arrowText);
+        });
+
+        this.input.keyboard?.on("keyup-LEFT", (event: any) => {
+            this.logAction(event, this.arrowText);
+        });
+
+        EventBus.on("init-saved-score", (score: ScoreObject) => {
+            this.score = score;
+        });
+
         EventBus.emit("current-scene-ready", this);
     }
 
-    update() {}
+    logAction(action: any, arrow: Phaser.GameObjects.Text) {
+        // Prevent score from being logged multiple times for the same turn
+        if (this.loggedScoreForTurn) return;
+        this.loggedScoreForTurn = true;
+
+        this.score.total += 1;
+
+        // arrow angle is 0 if the arrow is pointing to the right
+        if (
+            (action.code === "ArrowLeft" && arrow.angle === -180) ||
+            (action.code === "ArrowRight" && arrow.angle === 0) ||
+            (action.code === "ArrowUp" && arrow.angle === -90) ||
+            (action.code === "ArrowDown" && arrow.angle === 90)
+        ) {
+            EventBus.emit("score-correct", true);
+            this.score.score += 1;
+
+            if (arrow.style.color === BLUE) {
+                this.score.blue += 1;
+            } else {
+                this.score.red += 1;
+            }
+        } else {
+            EventBus.emit("score-correct", false);
+            this.score.score -= 1;
+        }
+
+        EventBus.emit("update-score", this.score);
+    }
 
     setRandomAngle(textObj: Phaser.GameObjects.Text) {
-        textObj.setAngle(Phaser.Math.RND.pick([-90, 0, 90, 180]));
+        this.loggedScoreForTurn = false;
+
+        // Don't allow the arrow to have the same angle as before
+        let newAngle;
+        do {
+            newAngle = Phaser.Math.RND.pick([-90, 0, 90, 180]);
+        } while (newAngle === textObj.angle);
+
+        textObj.setAngle(newAngle);
         textObj.setColor(Phaser.Math.RND.pick([RED, BLUE]));
     }
 

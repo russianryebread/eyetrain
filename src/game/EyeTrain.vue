@@ -3,7 +3,6 @@ import { onMounted, onUnmounted, ref } from "vue";
 import { EventBus } from "./EventBus";
 import { ScoreObject } from "../types/Score";
 import Phaser, { AUTO, Game } from "phaser";
-import Score from "./score";
 import ScoreBoard from "./scenes/ScoreBoard";
 
 const game = ref();
@@ -33,8 +32,7 @@ const config: Phaser.Types.Core.GameConfig = {
 
 onMounted(() => {
     // Set scene to be loaded from router
-    // config.scene = [props.scene, ScoreBoard];
-    config.scene = props.scene;
+    config.scene = [props.scene, ScoreBoard];
     game.value = new Game({ ...config });
 
     EventBus.on("current-scene-ready", (scene_instance: Phaser.Scene) => {
@@ -42,9 +40,10 @@ onMounted(() => {
     });
 
     EventBus.on("update-score", (score: ScoreObject) => {
+        console.log("Update Score", score);
         emit("update-score", score);
-        const s = new Score();
-        s.updateScore(score);
+        let scoreboard = game.value.scene.getScene("ScoreBoard");
+        scoreboard.setScore(score);
     });
 });
 

@@ -10,22 +10,13 @@ const FAST_CLICK_RESPONSE_TIME_MS = 800;
 export class ArrowGame extends Scene {
     camera: Phaser.Cameras.Scene2D.Camera;
     score: ScoreObject = { score: 0, total: 0, red: 0, blue: 0, avg: "0.0" };
-    scoreBoard: Phaser.GameObjects.Text;
-    resetScore: Phaser.GameObjects.Text;
     arrow: Phaser.GameObjects.Text;
     timeBetweenClicks: number = 0;
     timeOfLastClick: number = 0;
     timePerClickAvg: Array<number> = [];
-    correctSound: Phaser.Sound.BaseSound;
-    incorrectSound: Phaser.Sound.BaseSound;
 
     constructor() {
         super({ key: "ArrowGame" });
-    }
-
-    preload() {
-        this.load.audio("correct", ["assets/sounds/correct.mp3"]);
-        this.load.audio("incorrect", ["assets/sounds/incorrect.mp3"]);
     }
 
     updateTime() {
@@ -72,34 +63,10 @@ export class ArrowGame extends Scene {
         return { x, y };
     }
 
-    initScore() {
-        this.resetScore = this.add.text(300, 30, "Reset Score", {
-            fontSize: "30px",
-            color: "#0f0",
-        });
-        this.resetScore.setInteractive();
-        this.resetScore.on("pointerup", () => {
-            window.localStorage.removeItem("score");
-            window.localStorage.removeItem("timePerClickAverage");
-            this.score = { score: 0, total: 0, red: 0, blue: 0, avg: "0.0" };
-            this.setScore(this.score);
-        });
-
-        if (window.localStorage.getItem("score")) {
-            this.score = JSON.parse(window.localStorage.getItem("score") || "");
-        }
-
-        this.setScore(this.score);
-    }
-
     create() {
         this.camera = this.cameras.main;
         this.camera.setBackgroundColor(0x000000);
         this.cameras.main.setRoundPixels(true);
-        this.correctSound = this.sound.add("correct");
-        this.incorrectSound = this.sound.add("incorrect");
-
-        this.initScore();
 
         if (!this.arrow) {
             const { x, y } = this.genXY();
@@ -145,6 +112,10 @@ export class ArrowGame extends Scene {
             changeArrow();
         });
 
+        EventBus.on("init-saved-score", (score: ScoreObject) => {
+            this.score = score;
+        });
+
         EventBus.emit("current-scene-ready", this);
     }
 
@@ -158,7 +129,7 @@ export class ArrowGame extends Scene {
         this.score.avg = a.toFixed(2) || "0.0";
 
         const updateScore = () => {
-            this.correctSound.play();
+            EventBus.emit("score-correct", true);
             if (arrow.style.color === RED) {
                 this.score.red += 1;
             } else {
@@ -183,7 +154,7 @@ export class ArrowGame extends Scene {
         ) {
             updateScore();
         } else {
-            this.incorrectSound.play();
+            EventBus.emit("score-correct", false);
             // Try to discourage spam clicking
             if (this.timeBetweenClicks < 300) {
                 this.score.score -= 2;
@@ -197,27 +168,5 @@ export class ArrowGame extends Scene {
 
     setScore(score: ScoreObject) {
         EventBus.emit("update-score", score);
-        const text = [
-            `Score: ${score.score}`,
-            `Total: ${score.total}`,
-            `Red: ${score.red}`,
-            `Blue: ${score.blue}`,
-            `Avg: ${score.avg} seconds`,
-        ];
-
-        if (!this.scoreBoard) {
-            this.scoreBoard = this.add.text(10, 10, text, {
-                fontFamily: "Arial",
-                fontSize: 30,
-                color: "#FFFFFF",
-                stroke: "#000000",
-                strokeThickness: 2,
-                align: "left",
-            });
-        }
-
-        window.localStorage.setItem("score", JSON.stringify(score));
-
-        this.scoreBoard.setText(text);
     }
 }
