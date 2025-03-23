@@ -1,0 +1,386 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Asteroids Clone</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.55.2/phaser.min.js"></script>
+        <style>
+            body {
+                margin: 0;
+                background-color: #000;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+            }
+            canvas {
+                margin: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <script>
+            class MainScene extends Phaser.Scene {
+                constructor() {
+                    super({ key: "MainScene" });
+                }
+
+                preload() {
+                    // Load assets
+                    this.load.image("ship", "assets/images/ship.png");
+                    this.load.image("asteroid", "assets/images/asteroid.png");
+                    this.load.image("bullet", "assets/images/bullet.png");
+                    this.load.image("particle", "assets/images/particle.png");
+                }
+
+                create() {
+                    this.score = 0;
+                    this.lives = 3;
+                    this.gameOver = false;
+
+                    // Create score and lives text
+                    this.scoreText = this.add.text(16, 16, "Score: 0", {
+                        fontSize: "18px",
+                        fill: "#fff",
+                    });
+                    this.livesText = this.add.text(16, 40, "Lives: 3", {
+                        fontSize: "18px",
+                        fill: "#fff",
+                    });
+                    this.gameOverText = this.add
+                        .text(400, 300, "GAME OVER\nPress SPACE to restart", {
+                            fontSize: "32px",
+                            fill: "#fff",
+                            align: "center",
+                        })
+                        .setOrigin(0.5)
+                        .setVisible(false);
+
+                    // Set up keyboard controls
+                    this.cursors = this.input.keyboard.createCursorKeys();
+                    this.spaceBar = this.input.keyboard.addKey(
+                        Phaser.Input.Keyboard.KeyCodes.SPACE,
+                    );
+
+                    // Create player ship
+                    this.createShip();
+
+                    // Create asteroid group
+                    this.asteroids = this.physics.add.group();
+
+                    // Create bullets group
+                    this.bullets = this.physics.add.group();
+
+                    // Create particles for explosions
+                    this.particles = this.add.particles("particle");
+
+                    // Create initial asteroids
+                    this.createAsteroids(4);
+
+                    // Set up collisions
+                    this.physics.add.overlap(
+                        this.bullets,
+                        this.asteroids,
+                        this.bulletHitAsteroid,
+                        null,
+                        this,
+                    );
+                    this.physics.add.overlap(
+                        this.ship,
+                        this.asteroids,
+                        this.asteroidHitShip,
+                        null,
+                        this,
+                    );
+
+                    // Set world bounds events
+                    this.physics.world.on(
+                        "worldbounds",
+                        this.handleWorldBounds,
+                        this,
+                    );
+                }
+
+                createShip() {
+                    // Create player ship
+                    this.ship = this.physics.add.sprite(400, 300, "ship");
+                    this.ship.setDamping(true);
+                    this.ship.setDrag(0.99);
+                    this.ship.setMaxVelocity(200);
+                    this.ship.setCollideWorldBounds(true);
+                    this.ship.setBounce(1);
+                    this.ship.body.setAllowGravity(false);
+                    this.ship.setData("invulnerable", false);
+
+                    // Set up fire cooldown
+                    this.lastFired = 0;
+                }
+
+                createAsteroids(count) {
+                    for (let i = 0; i < count; i++) {
+                        const x = Phaser.Math.Between(0, 800);
+                        const y = Phaser.Math.Between(0, 600);
+
+                        // Don't spawn too close to the player
+                        if (
+                            Phaser.Math.Distance.Between(x, y, 400, 300) < 100
+                        ) {
+                            i--;
+                            continue;
+                        }
+
+                        this.createAsteroid(x, y, "large");
+                    }
+                }
+
+                createAsteroid(x, y, size) {
+                    const asteroid = this.asteroids.create(x, y, "asteroid");
+
+                    // Set asteroid properties based on size
+                    if (size === "large") {
+                        asteroid.setScale(1);
+                        asteroid.setData("size", "large");
+                        asteroid.setData("points", 20);
+                    } else if (size === "medium") {
+                        asteroid.setScale(0.6);
+                        asteroid.setData("size", "medium");
+                        asteroid.setData("points", 50);
+                    } else {
+                        asteroid.setScale(0.3);
+                        asteroid.setData("size", "small");
+                        asteroid.setData("points", 100);
+                    }
+
+                    // Set physics properties
+                    asteroid.body.setAllowGravity(false);
+                    asteroid.setCollideWorldBounds(true);
+                    asteroid.setBounce(1);
+
+                    // Set random velocity
+                    const vx = Phaser.Math.Between(-100, 100);
+                    const vy = Phaser.Math.Between(-100, 100);
+                    asteroid.setVelocity(vx, vy);
+
+                    // Add random rotation
+                    asteroid.setAngularVelocity(Phaser.Math.Between(-50, 50));
+
+                    return asteroid;
+                }
+
+                fireBullet() {
+                    if (this.gameOver) return;
+
+                    const time = this.time.now;
+                    if (time - this.lastFired < 250) return; // Fire cooldown
+
+                    const bullet = this.bullets.create(
+                        this.ship.x,
+                        this.ship.y,
+                        "bullet",
+                    );
+                    bullet.body.setAllowGravity(false);
+
+                    // Get ship direction
+                    const angle = Phaser.Math.DegToRad(this.ship.angle - 90);
+                    bullet.setRotation(angle);
+
+                    // Calculate velocity based on ship angle
+                    const vx = Math.cos(angle) * 400;
+                    const vy = Math.sin(angle) * 400;
+
+                    bullet.setVelocity(vx, vy);
+
+                    // Set bullet lifetime
+                    bullet.setData("lifeTime", time + 1000);
+
+                    this.lastFired = time;
+                }
+
+                bulletHitAsteroid(bullet, asteroid) {
+                    // Create explosion
+                    this.createExplosion(asteroid.x, asteroid.y);
+
+                    // Increment score
+                    this.score += asteroid.getData("points");
+                    this.scoreText.setText("Score: " + this.score);
+
+                    // Split asteroid if it's not the smallest size
+                    const size = asteroid.getData("size");
+                    if (size === "large" || size === "medium") {
+                        const newSize = size === "large" ? "medium" : "small";
+
+                        // Create two smaller asteroids
+                        for (let i = 0; i < 2; i++) {
+                            const offset = i === 0 ? -20 : 20;
+                            this.createAsteroid(
+                                asteroid.x + offset,
+                                asteroid.y + offset,
+                                newSize,
+                            );
+                        }
+                    }
+
+                    // Destroy bullet and asteroid
+                    bullet.destroy();
+                    asteroid.destroy();
+
+                    // Check if all asteroids are destroyed
+                    if (this.asteroids.countActive() === 0) {
+                        // Create new wave with more asteroids
+                        this.time.delayedCall(1000, () => {
+                            this.createAsteroids(this.score / 200 + 4);
+                        });
+                    }
+                }
+
+                asteroidHitShip(ship, asteroid) {
+                    if (ship.getData("invulnerable")) return;
+
+                    // Create explosion
+                    this.createExplosion(ship.x, ship.y);
+
+                    // Lose a life
+                    this.lives--;
+                    this.livesText.setText("Lives: " + this.lives);
+
+                    if (this.lives <= 0) {
+                        this.gameOver = true;
+                        ship.setVisible(false);
+                        ship.body.enable = false;
+                        this.gameOverText.setVisible(true);
+                    } else {
+                        // Make ship invulnerable for a bit
+                        ship.setData("invulnerable", true);
+                        ship.setAlpha(0.5);
+
+                        // Reset ship position and velocity
+                        ship.setPosition(400, 300);
+                        ship.setVelocity(0, 0);
+                        ship.setAngularVelocity(0);
+                        ship.setRotation(0);
+
+                        // Reset invulnerability after 2 seconds
+                        this.time.delayedCall(2000, () => {
+                            ship.setData("invulnerable", false);
+                            ship.setAlpha(1);
+                        });
+                    }
+                }
+
+                createExplosion(x, y) {
+                    const emitter = this.particles.createEmitter({
+                        x: x,
+                        y: y,
+                        speed: { min: 50, max: 150 },
+                        scale: { start: 1, end: 0 },
+                        lifespan: 800,
+                        blendMode: "ADD",
+                        quantity: 15,
+                    });
+
+                    // Stop emitter after a single burst
+                    this.time.delayedCall(100, () => {
+                        emitter.stop();
+                    });
+
+                    // Remove emitter after particles fade
+                    this.time.delayedCall(1000, () => {
+                        emitter.remove();
+                    });
+                }
+
+                handleWorldBounds(body) {
+                    // For bullets, destroy them when they hit world bounds
+                    if (
+                        body.gameObject &&
+                        body.gameObject.texture.key === "bullet"
+                    ) {
+                        body.gameObject.destroy();
+                    }
+                }
+
+                update(time) {
+                    // Handle restart
+                    if (
+                        this.gameOver &&
+                        Phaser.Input.Keyboard.JustDown(this.spaceBar)
+                    ) {
+                        this.scene.restart();
+                        return;
+                    }
+
+                    if (this.gameOver) return;
+
+                    // Clean up bullets that have exceeded their lifetime
+                    this.bullets.getChildren().forEach((bullet) => {
+                        if (time > bullet.getData("lifeTime")) {
+                            bullet.destroy();
+                        }
+                    });
+
+                    // Ship controls
+                    if (this.cursors.left.isDown) {
+                        this.ship.setAngularVelocity(-150);
+                    } else if (this.cursors.right.isDown) {
+                        this.ship.setAngularVelocity(150);
+                    } else {
+                        this.ship.setAngularVelocity(0);
+                    }
+
+                    // Thrust
+                    if (this.cursors.up.isDown) {
+                        // Calculate acceleration based on ship angle
+                        const angle = Phaser.Math.DegToRad(
+                            this.ship.angle - 90,
+                        );
+                        const ax = Math.cos(angle) * 150;
+                        const ay = Math.sin(angle) * 150;
+
+                        this.ship.setAcceleration(ax, ay);
+                    } else {
+                        this.ship.setAcceleration(0, 0);
+                    }
+
+                    // Fire bullet
+                    if (this.spaceBar.isDown) {
+                        this.fireBullet();
+                    }
+
+                    // Screen wrap for objects
+                    this.wrapObject(this.ship);
+                    this.asteroids.getChildren().forEach(this.wrapObject, this);
+                }
+
+                wrapObject(object) {
+                    if (object.x < 0) {
+                        object.x = 800;
+                    } else if (object.x > 800) {
+                        object.x = 0;
+                    }
+
+                    if (object.y < 0) {
+                        object.y = 600;
+                    } else if (object.y > 600) {
+                        object.y = 0;
+                    }
+                }
+            }
+
+            const config = {
+                type: Phaser.AUTO,
+                width: 800,
+                height: 600,
+                backgroundColor: "#000000",
+                physics: {
+                    default: "arcade",
+                    arcade: {
+                        debug: false,
+                    },
+                },
+                scene: [MainScene],
+            };
+
+            const game = new Phaser.Game(config);
+        </script>
+    </body>
+</html>
