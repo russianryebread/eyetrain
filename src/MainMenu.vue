@@ -6,6 +6,7 @@
             <ul>
                 <li><RouterLink to="/arrows">Arrows Game</RouterLink></li>
                 <li><RouterLink to="/float">Float Game</RouterLink></li>
+                <li><RouterLink to="/asteroid.html">Asteroids</RouterLink></li>
             </ul>
         </nav>
     </div>

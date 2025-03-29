@@ -2,8 +2,14 @@
 <html>
     <head>
         <meta charset="UTF-8" />
-        <title>Asteroids Clone</title>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.55.2/phaser.min.js"></script>
+        <title>Asteroids</title>
+        <
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.87.0/phaser.min.js"
+            integrity="sha512-e251dDfxfj70o3iWsf84M612cWbWdTXjVbFXA7MavobTcKB1sCLV+WNiduc20UrpWLXRgi1tgob1TOAfySx9Xg=="
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"
+        ></script>
         <style>
             body {
                 margin: 0;
@@ -21,6 +27,9 @@
     <body>
         <script>
             class MainScene extends Phaser.Scene {
+                RED = 0xff0000;
+                BLUE = 0x0000ff;
+
                 constructor() {
                     super({ key: "MainScene" });
                 }
@@ -28,27 +37,44 @@
                 preload() {
                     // Load assets
                     this.load.image("ship", "assets/images/ship.png");
-                    this.load.image("asteroid", "assets/images/asteroid.png");
+                    this.load.image("asteroid", "assets/images/asteroid_w.png");
                     this.load.image("bullet", "assets/images/bullet.png");
                     this.load.image("particle", "assets/images/particle.png");
+                    this.load.audio("phaser_fire", [
+                        "assets/sounds/phaser.mp3",
+                    ]);
+                    this.load.audio("explosion", [
+                        "assets/sounds/explosion.mp3",
+                    ]);
                 }
 
                 create() {
-                    this.score = 0;
-                    this.lives = 3;
+                    this.score = { red: 0, blue: 0 };
+                    this.lives = 4;
+                    this.level = 1;
                     this.gameOver = false;
+                    this.color = Phaser.Math.RND.pick([this.RED, this.BLUE]);
+
+                    this.phaserFireSound = this.sound.add("phaser_fire", {
+                        volume: 0.2,
+                    });
+                    this.explosionSound = this.sound.add("explosion");
 
                     // Create score and lives text
-                    this.scoreText = this.add.text(16, 16, "Score: 0", {
+                    this.redScoreText = this.add.text(16, 16, "Score: 0", {
                         fontSize: "18px",
-                        fill: "#fff",
+                        fill: "#ff0000",
                     });
-                    this.livesText = this.add.text(16, 40, "Lives: 3", {
+                    this.blueScoreText = this.add.text(16, 40, "Score: 0", {
+                        fontSize: "18px",
+                        fill: "#0000ff",
+                    });
+                    this.livesText = this.add.text(16, 74, "Lives: 3", {
                         fontSize: "18px",
                         fill: "#fff",
                     });
                     this.gameOverText = this.add
-                        .text(400, 300, "GAME OVER\nPress SPACE to restart", {
+                        .text(400, 300, "GAME OVER\nPress ESC to restart", {
                             fontSize: "32px",
                             fill: "#fff",
                             align: "center",
@@ -61,6 +87,9 @@
                     this.spaceBar = this.input.keyboard.addKey(
                         Phaser.Input.Keyboard.KeyCodes.SPACE,
                     );
+                    this.esc = this.input.keyboard.addKey(
+                        Phaser.Input.Keyboard.KeyCodes.ESC,
+                    );
 
                     // Create player ship
                     this.createShip();
@@ -70,9 +99,6 @@
 
                     // Create bullets group
                     this.bullets = this.physics.add.group();
-
-                    // Create particles for explosions
-                    this.particles = this.add.particles("particle");
 
                     // Create initial asteroids
                     this.createAsteroids(4);
@@ -104,13 +130,15 @@
                 createShip() {
                     // Create player ship
                     this.ship = this.physics.add.sprite(400, 300, "ship");
+                    this.ship.setScale(0.5);
                     this.ship.setDamping(true);
-                    this.ship.setDrag(0.99);
-                    this.ship.setMaxVelocity(200);
-                    this.ship.setCollideWorldBounds(true);
+                    this.ship.setDrag(0);
+                    this.ship.setMaxVelocity(1200);
+                    this.ship.setCollideWorldBounds(false);
                     this.ship.setBounce(1);
                     this.ship.body.setAllowGravity(false);
                     this.ship.setData("invulnerable", false);
+                    this.ship.tint = this.color;
 
                     // Set up fire cooldown
                     this.lastFired = 0;
@@ -153,7 +181,7 @@
 
                     // Set physics properties
                     asteroid.body.setAllowGravity(false);
-                    asteroid.setCollideWorldBounds(true);
+                    asteroid.setCollideWorldBounds(false);
                     asteroid.setBounce(1);
 
                     // Set random velocity
@@ -163,6 +191,8 @@
 
                     // Add random rotation
                     asteroid.setAngularVelocity(Phaser.Math.Between(-50, 50));
+
+                    asteroid.tint = this.color;
 
                     return asteroid;
                 }
@@ -180,6 +210,8 @@
                     );
                     bullet.body.setAllowGravity(false);
 
+                    this.phaserFireSound.play();
+
                     // Get ship direction
                     const angle = Phaser.Math.DegToRad(this.ship.angle - 90);
                     bullet.setRotation(angle);
@@ -193,6 +225,8 @@
                     // Set bullet lifetime
                     bullet.setData("lifeTime", time + 1000);
 
+                    bullet.tint = this.color;
+
                     this.lastFired = time;
                 }
 
@@ -201,8 +235,13 @@
                     this.createExplosion(asteroid.x, asteroid.y);
 
                     // Increment score
-                    this.score += asteroid.getData("points");
-                    this.scoreText.setText("Score: " + this.score);
+                    if (this.color === this.RED) {
+                        this.score.red += asteroid.getData("points");
+                        this.redScoreText.setText("Score: " + this.score.red);
+                    } else {
+                        this.score.blue += asteroid.getData("points");
+                        this.blueScoreText.setText("Score: " + this.score.blue);
+                    }
 
                     // Split asteroid if it's not the smallest size
                     const size = asteroid.getData("size");
@@ -226,9 +265,16 @@
 
                     // Check if all asteroids are destroyed
                     if (this.asteroids.countActive() === 0) {
+                        this.level += 1;
+
+                        // Change tint to opposite color
+                        this.color =
+                            this.color === this.RED ? this.BLUE : this.RED;
+                        this.ship.tint = this.color;
+
                         // Create new wave with more asteroids
                         this.time.delayedCall(1000, () => {
-                            this.createAsteroids(this.score / 200 + 4);
+                            this.createAsteroids(this.level + 4);
                         });
                     }
                 }
@@ -268,14 +314,15 @@
                 }
 
                 createExplosion(x, y) {
-                    const emitter = this.particles.createEmitter({
-                        x: x,
-                        y: y,
+                    this.explosionSound.play();
+
+                    const emitter = this.add.particles(x, y, "particle", {
                         speed: { min: 50, max: 150 },
                         scale: { start: 1, end: 0 },
                         lifespan: 800,
                         blendMode: "ADD",
                         quantity: 15,
+                        tint: this.color,
                     });
 
                     // Stop emitter after a single burst
@@ -285,17 +332,21 @@
 
                     // Remove emitter after particles fade
                     this.time.delayedCall(1000, () => {
-                        emitter.remove();
+                        emitter.destroy();
                     });
                 }
 
                 handleWorldBounds(body) {
+                    console.log(body);
                     // For bullets, destroy them when they hit world bounds
                     if (
                         body.gameObject &&
                         body.gameObject.texture.key === "bullet"
                     ) {
-                        body.gameObject.destroy();
+                        //body.gameObject.destroy();
+                    } else {
+                        // For asteroids, wrap them around the screen
+                        this.wrapObject(body.gameObject);
                     }
                 }
 
@@ -303,7 +354,7 @@
                     // Handle restart
                     if (
                         this.gameOver &&
-                        Phaser.Input.Keyboard.JustDown(this.spaceBar)
+                        Phaser.Input.Keyboard.JustDown(this.esc)
                     ) {
                         this.scene.restart();
                         return;
@@ -333,8 +384,8 @@
                         const angle = Phaser.Math.DegToRad(
                             this.ship.angle - 90,
                         );
-                        const ax = Math.cos(angle) * 150;
-                        const ay = Math.sin(angle) * 150;
+                        const ax = Math.cos(angle) * 250;
+                        const ay = Math.sin(angle) * 250;
 
                         this.ship.setAcceleration(ax, ay);
                     } else {

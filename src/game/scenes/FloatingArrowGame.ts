@@ -123,10 +123,24 @@ export class FloatingArrowGame extends Scene {
         textObj.setColor(Phaser.Math.RND.pick([RED, BLUE]));
     }
 
+    // Function to check if the angle is in (or close to) a straight direction
+    isStraightDirection(angle: number) {
+        const threshold = Math.PI / 8; // 22.5 degrees
+        return (
+            angle < threshold || // Right
+            angle > Math.PI * 2 - threshold || // Left
+            (angle > Math.PI / 2 - threshold &&
+                angle < Math.PI / 2 + threshold) || // Up
+            (angle > (3 * Math.PI) / 2 - threshold &&
+                angle < (3 * Math.PI) / 2 + threshold) // Down
+        );
+    }
+
     setRandomDirection(textObj: Phaser.GameObjects.Text) {
         try {
-            // Generate a random angle in radians
-            this.angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+            do {
+                this.angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+            } while (this.isStraightDirection(this.angle));
 
             // Convert angle to velocity
             const vx = Math.cos(this.angle) * SPEED;
